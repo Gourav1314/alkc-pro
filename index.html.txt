@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ALKC Trading AI PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;text-align:center;}
+.box{background:#111827;padding:15px;margin:10px;border-radius:10px;}
+button{padding:10px;margin:5px;background:#22c55e;border:none;border-radius:5px;}
+input{padding:10px;margin:5px;border-radius:5px;border:none;}
+</style>
+</head>
+
+<body>
+
+<h1>🚀 ALKC Trading AI PRO</h1>
+
+<button onclick="startVoice()">🎤 Voice Assistant Start</button>
+
+<div class="box">
+<h3>📈 Live Chart</h3>
+<div id="chart"></div>
+</div>
+
+<div class="box">
+<h3>📊 Smart Signal</h3>
+<p id="signal"></p>
+<p id="pattern"></p>
+<p id="explain"></p>
+<button onclick="takeTrade()">Take Trade</button>
+</div>
+
+<div class="box">
+<h3>💰 Risk Calculator</h3>
+<input id="capital" placeholder="Enter Capital">
+<button onclick="calc()">Calculate</button>
+<p id="risk"></p>
+</div>
+
+<div class="box">
+<h3>🧠 Mindset</h3>
+<p id="mind"></p>
+</div>
+
+<script>
+
+/* TradingView */
+new TradingView.widget({
+  "width": "100%",
+  "height": 400,
+  "symbol": "NSE:NIFTY",
+  "interval": "5",
+  "timezone": "Asia/Kolkata",
+  "theme": "dark",
+  "container_id": "chart"
+});
+
+/* VOICE */
+function speak(text){
+  let s = new SpeechSynthesisUtterance(text);
+  s.lang="hi-IN";
+  speechSynthesis.speak(s);
+}
+
+/* VOICE COMMAND */
+let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = "hi-IN";
+
+recognition.onresult = function(event){
+  let cmd = event.results[event.results.length-1][0].transcript.toLowerCase();
+
+  if(cmd.includes("signal")){
+    speak("अभी का सिग्नल है " + currentSignal);
+  }
+  else if(cmd.includes("risk")){
+    speak("कैपिटल डालकर calculate दबाएं");
+  }
+  else if(cmd.includes("trade")){
+    takeTrade();
+  }
+  else{
+    speak("समझ नहीं आया, फिर से बोलिए");
+  }
+};
+
+function startVoice(){
+  recognition.start();
+  speak("ALKC ट्रेडिंग असिस्टेंट शुरू हो गया है");
+}
+
+/* REAL DATA */
+async function getData(){
+  let res = await fetch("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=3");
+  return await res.json();
+}
+
+/* PATTERN */
+function detectPattern(o,h,l,c){
+  let body=Math.abs(o-c);
+  let range=h-l;
+
+  if(body<range*0.1) return "Doji";
+  if(c>o && body>range*0.6) return "Bullish Engulfing";
+  if(o>c && body>range*0.6) return "Bearish Engulfing";
+  return "No Pattern";
+}
+
+/* MAIN SIGNAL */
+let currentSignal="";
+
+async function generateSignal(){
+
+  let data = await getData();
+
+  let prevClose = parseFloat(data[1][4]);
+  let currClose = parseFloat(data[2][4]);
+
+  let o = parseFloat(data[2][1]);
+  let h = parseFloat(data[2][2]);
+  let l = parseFloat(data[2][3]);
+  let c = currClose;
+
+  let pattern = detectPattern(o,h,l,c);
+  let trend = currClose > prevClose ? "UPTREND" : "DOWNTREND";
+
+  let signal="NO TRADE";
+  let confidence="Low";
+
+  if(pattern.includes("Bullish") && trend=="UPTREND"){
+    signal="BUY";
+    confidence="High";
+  }
+  else if(pattern.includes("Bearish") && trend=="DOWNTREND"){
+    signal="SELL";
+    confidence="High";
+  }
+
+  currentSignal = signal + " | SL 1% | TARGET 2%";
+
+  document.getElementById("signal").innerText = currentSignal;
+  document.getElementById("pattern").innerText =
+    "Pattern: "+pattern+" | Trend: "+trend;
+
+  document.getElementById("explain").innerText =
+    "Confidence: "+confidence+" (Real Data Based)";
+
+  speak("नया सिग्नल " + signal + ", कॉन्फिडेंस " + confidence);
+}
+
+/* RISK */
+function calc(){
+  let cap=document.getElementById("capital").value;
+  let risk=cap*0.01;
+  let target=cap*0.02;
+
+  document.getElementById("risk").innerText =
+    "Risk ₹"+risk+" | Target ₹"+target;
+
+  speak("आपका रिस्क "+risk+" और टारगेट "+target);
+}
+
+/* TRADE */
+function takeTrade(){
+  speak("ट्रेड कन्फर्म, स्टॉप लॉस जरूर लगाएं");
+}
+
+/* MINDSET */
+function mindset(){
+  let rules=[
+    "डिसिप्लिन फॉलो करो",
+    "लॉस नॉर्मल है",
+    "ओवर ट्रेड मत करो",
+    "सिस्टम पर भरोसा रखो"
+  ];
+  let msg = rules[Math.floor(Math.random()*rules.length)];
+  document.getElementById("mind").innerText=msg;
+  speak(msg);
+}
+
+/* AUTO */
+setInterval(generateSignal,15000);
+generateSignal();
+mindset();
+
+</script>
+
+</body>
+</html>
